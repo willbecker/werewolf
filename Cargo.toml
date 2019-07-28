@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 rand = "0.7"
+cursive = "0.12.0"
