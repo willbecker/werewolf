@@ -4,7 +4,7 @@ Will Becker wibecker@pdx.edu
 This is a text based version of the game <a href="https://en.wikipedia.org/wiki/Mafia_(party_game)">Werewolf</a>. 
 This version of werewolf is going to be designed for online play, although the online implementation won't come until after the core functionaliy is complete.
 
-Rustc version: 1.38.0-nightly
+Rustc version: 1.38.0-nightly (2019-07-23)
 
 ## Roles
 In Werewolf, each player gets assigned a random role. Every role has a win condition, and some roles get extra information or have an ability.
