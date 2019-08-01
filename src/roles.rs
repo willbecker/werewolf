@@ -1,24 +1,27 @@
 use rand::prelude::*;
 
-pub const AVAILABLE_ROLES: [&str; 3] = [
-    "werewolf",
-    "villager",
-    "witch",
-];
-
-pub enum Role {
-    Werewolf, 
-    Villager, 
-    Witch,
+pub struct RoleGen {
+    roles: Vec<String>,
 }
 
-pub fn print_roles() {
-    let mut rng = rand::thread_rng();
-    let mut roles = vec!["h", "j"];
+impl RoleGen {
+    pub fn new() -> RoleGen {
+        let mut rng = rand::thread_rng();
+        let mut roles = vec![
+            "werewolf".to_string(),
+            "villager".to_string(),
+            "witch".to_string()
+        ];
 
-    roles.shuffle(&mut rng);
-    println!("{:?}", roles);
-    for p in 0..roles.len(){
-        println!("player {} is a {}", p+1, roles.pop().unwrap());
+        roles.shuffle(&mut rng);
+
+        RoleGen {
+            roles: roles,
+        }
+    }
+
+    pub fn get(&self, num: usize) -> String {
+        self.roles[num].clone()
     }
 }
+
