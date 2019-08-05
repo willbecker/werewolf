@@ -4,6 +4,15 @@ version = "0.1.0"
 authors = ["Will Becker <wibecker@pdx.edu>"]
 edition = "2018"
 
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/client"
+
 [dependencies]
 rand = "0.7"
-rocket = "0.4.2"
+stdweb = "0.4.18"
+ws = "0.9.0"
