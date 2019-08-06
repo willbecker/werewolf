@@ -1,17 +1,10 @@
 extern crate stdweb;
 
-use stdwen::traits::*;
 use stdweb::unstable::TryInto;
-use stdweb::web::{
-    HtmlElement,
-    document,
-    WebSocket,
-};
+use stdweb::web::{document, HtmlElement, WebSocket};
+use stdwen::traits::*;
 
-use stdweb::web::event::{
-    KeyPressEvent,
-    SocketMessageEvent,
-};
+use stdweb::web::event::{KeyPressEvent, SocketMessageEvent};
 
 use stdweb::web::html_element::InputElement;
 
