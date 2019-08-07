@@ -6,9 +6,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(client: Sender) -> Player {
-        let name = "".to_string();
-
+    pub fn new(name: String, client: Sender) -> Player {
         Player { name, client }
     }
 }

@@ -1,13 +1,18 @@
 // A WebSocket echo server
 
 use ws::*;
+use bincode;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 mod player;
+mod utility;
 use player::*;
+use utility::*;
 
 struct Server {
     out: Sender,
-    lobby: Vec<Player>,
+    lobby: Rc<RefCell<Vec<Player>>>,
 }
 
 impl Handler for Server {
@@ -18,20 +23,18 @@ impl Handler for Server {
             usize::from(self.out.token())
         );
         println!("{}", connect_msg);
-        self.out.send(Message::text("name_request"));
-
         Ok(())
     }
 
     fn on_message(&mut self, msg: Message) -> Result<()> {
-        println!("User {}: {}", usize::from(self.out.token()), msg);
-
-        // echo message back to client showing who sent it
-        let text = "User ".to_string()
-            + &usize::from(self.out.token()).to_string()
-            + ": "
-            + &msg.into_text().unwrap();
-        self.out.send(Message::text(text))
+        if msg.is_binary() {
+            match bincode::deserialize(&msg.into_data()).unwrap() {
+                Packet::Username(name) => 
+                    self.lobby.borrow_mut().push(Player::new(name, self.out.clone())),
+                p => println!("Bad Packet {:?}", p),
+            }
+        }
+        Ok(())
     }
     fn on_close(&mut self, code: CloseCode, reason: &str) {
         println!(
@@ -44,10 +47,13 @@ impl Handler for Server {
 }
 
 fn main() {
+    let mut main_lobby = Rc::new(RefCell::new(Vec::new()));
     println!("Server running at '127.0.0.1:3012'");
     listen("127.0.0.1:3012", |out| {
-        let mut lobby = Vec::new();
-        Server { out, lobby }
+        Server { 
+            out, 
+            lobby: main_lobby.clone(),
+        }
     })
     .unwrap();
 }
