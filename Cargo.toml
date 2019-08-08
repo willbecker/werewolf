@@ -4,17 +4,10 @@ version = "0.1.0"
 authors = ["Will Becker <wibecker@pdx.edu>"]
 edition = "2018"
 
-[[bin]]
-name = "server"
-path = "src/server.rs"
-
-[[bin]]
-name = "client"
-path = "src/client.rs"
-
 [dependencies]
 rand = "0.7"
 ws = "0.9.0"
 bincode = "1.1.4"
 dialoguer = "0.4.0"
+clap = "2.33.0"
 serde = { version = "1.0.98", features = ["derive"] }
