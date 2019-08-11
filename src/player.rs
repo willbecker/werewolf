@@ -3,7 +3,7 @@ use std::sync::mpsc::Receiver;
 use ws::Sender as NetSender;
 
 pub struct Player {
-    client: NetSender,
+    pub client: NetSender,
     pub event_recv: Receiver<Event>,
     pub name: String,
 }

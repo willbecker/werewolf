@@ -18,13 +18,13 @@ pub fn server(sender: Sender<(NetSender, Receiver<Event>)>) {
     .unwrap();
 }
 
-pub fn client(sender: Sender<(NetSender, Receiver<Event>)>) {
-    if let Err(error) = connect("ws://localhost:3012", |out| Connection {
+pub fn client(sender: Sender<(NetSender, Receiver<Event>)>, url: String) {
+    if let Err(error) = connect(url, |out| Connection {
         out,
         thread: sender.clone(),
         event_que: None,
     }) {
-        println!("Failed to connect to WebSocket server ({:?})", error);
+        println!("Failed to connect to server ({:?})", error);
     }
 }
 
@@ -36,7 +36,7 @@ pub struct Connection {
 }
 
 impl Handler for Connection {
-    fn on_open(&mut self, shake: Handshake) -> Result<()> {
+    fn on_open(&mut self, _: Handshake) -> Result<()> {
         let (event_send, event_recv) = channel();
         self.event_que = Some(event_send);
         self.thread
