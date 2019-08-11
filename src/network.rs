@@ -1,25 +1,28 @@
 // https://github.com/housleyjk/ws-rs/blob/master/examples/cli.rs
 use bincode;
-use serde::{Deserialize, Serialize};
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use ws::Sender as NetSender;
 use ws::*;
 
-pub fn server(sender: Sender<Connection>) {
+use crate::event::Event;
+
+pub fn server(sender: Sender<(NetSender, Receiver<Event>)>) {
     println!("Server running at '127.0.0.1:3012'");
     listen("127.0.0.1:3012", |out| Connection {
         out,
         thread: sender.clone(),
-        event: Vec::new(),
+        event_que: None,
     })
     .unwrap();
 }
 
-pub fn client(sender: Sender<Connection>) {
+pub fn client(sender: Sender<(NetSender, Receiver<Event>)>) {
     if let Err(error) = connect("ws://localhost:3012", |out| Connection {
         out,
         thread: sender.clone(),
-        event: Vec::new(),
+        event_que: None,
     }) {
         println!("Failed to connect to WebSocket server ({:?})", error);
     }
@@ -27,21 +30,17 @@ pub fn client(sender: Sender<Connection>) {
 
 #[derive(Clone)]
 pub struct Connection {
-    out: NetSender,
-    thread: Sender<Connection>,
-    event: Vec<Event>,
+    pub out: NetSender,
+    thread: Sender<(NetSender, Receiver<Event>)>,
+    pub event_que: Option<Sender<Event>>,
 }
 
 impl Handler for Connection {
     fn on_open(&mut self, shake: Handshake) -> Result<()> {
-        let connect_msg = format!(
-            "New connection from {} with with token {}",
-            shake.remote_addr().unwrap().unwrap(),
-            usize::from(self.out.token())
-        );
-        println!("{}", connect_msg);
+        let (event_send, event_recv) = channel();
+        self.event_que = Some(event_send);
         self.thread
-            .send(self.clone())
+            .send((self.out.clone(), event_recv))
             .expect("Could not send connection to main thread.");
         Ok(())
     }
@@ -49,7 +48,12 @@ impl Handler for Connection {
     fn on_message(&mut self, msg: Message) -> Result<()> {
         if msg.is_binary() {
             let event: Event = bincode::deserialize(&msg.into_data()).unwrap();
-            self.event.push(event);
+            println!("Received message {:?}", event);
+            self.event_que
+                .as_ref()
+                .unwrap()
+                .send(event)
+                .expect("Could not send event to main thread");
         }
         Ok(())
     }
@@ -60,16 +64,5 @@ impl Handler for Connection {
             code,
             reason
         );
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-pub enum Event {
-    SetName(String),
-}
-
-impl Into<Vec<u8>> for Event {
-    fn into(self) -> Vec<u8> {
-        bincode::serialize(&self).unwrap()
     }
 }

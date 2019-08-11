@@ -1,17 +1,19 @@
-use ws::Sender;
-use dialoguer::Input;
+use crate::event::Event;
+use std::sync::mpsc::Receiver;
+use ws::Sender as NetSender;
 
 pub struct Player {
-    name: String,
-    client: Sender,
+    client: NetSender,
+    pub event_recv: Receiver<Event>,
+    pub name: String,
 }
 
 impl Player {
-    pub fn new(name: String, client: Sender) -> Player {
-        Player { name, client }
+    pub fn new(client: NetSender, event_recv: Receiver<Event>) -> Player {
+        Player {
+            client,
+            event_recv,
+            name: "".to_string(),
+        }
     }
-}
-
-fn promt_name() -> String {
-    Input::<String>::new().with_prompt("Username").interact().unwrap()
 }
