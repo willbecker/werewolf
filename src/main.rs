@@ -19,6 +19,10 @@ use player::Player;
 
 type Prompt = CustomPromptCharacterTheme;
 
+// The main function parses the command line argumens using Clap
+// to determine if the server or client should be run. By default,
+// the client will be run. Use "--server" or "-s" to run the server.
+// "-h" will give the standard help message.
 fn main() {
     let matches = App::new("Werewolf")
         .author("Will Becker <wibecker@pdx.edu>")
@@ -32,15 +36,30 @@ fn main() {
 
     if matches.is_present("server") {
         // SERVER
+
+        // The listener needs to run on its own thread to pick up
+        // new clients while the game is running. The listener sends
+        // back info about those new clients using a channel.
+        // client_recv will contain a tuple with a Sender for the client,
+        // and an Event Receiver that we can use to check for Events
+        // coming from the client.
         let (client_send, client_recv) = channel();
         thread::spawn(move || server(client_send));
 
+        // We want a command prompt so that we can interact with the
+        // server while it is running. This will need to be on a seperate
+        // thread so that game can run while we enter commands. The prompt
+        // will send Events back over a channel.
         let (command_send, command_recv) = channel();
         thread::spawn(move || command_promt(command_send));
 
         let mut lobby = BTreeMap::new();
 
         loop {
+            // First, check to see if there are any new clients sitting
+            // in the receiver. For each client found, send a username
+            // request, create a Player with the client info, and add
+            // that player to the lobby.
             let connections = client_recv.try_iter();
             for (client, event_recv) in connections {
                 println!("Creating Player {:?}", client.token());
@@ -50,13 +69,16 @@ fn main() {
 
             handle_player_event(&mut lobby);
 
+            // This will return true if the quit command was entered.
+            // At which point the server should shutdown.
             if handle_command_event(&command_recv, &mut lobby) {
                 for player in lobby.values() {
-                    player
-                        .client
+                    player.client
                         .close_with_reason(CloseCode::Normal, "Server shutdown")
                         .unwrap();
                 }
+                // The clients need some time to recieve the close
+                // before the server shuts sown.
                 thread::sleep(Duration::from_millis(100));
                 return;
             }
