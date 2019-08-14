@@ -1,21 +1,27 @@
 use clap::{App, Arg};
 use dialoguer::theme::CustomPromptCharacterTheme;
 use dialoguer::Input;
-use std::collections::BTreeMap;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use ws::{CloseCode, Message};
+use std::collections::HashSet;
+use ws::{Message};
 
 mod network;
 use network::{client, server};
+
+mod client;
+use client::Client;
 
 mod event;
 use event::*;
 
 mod player;
 use player::Player;
+
+mod game;
+use game::Game;
 
 type Prompt = CustomPromptCharacterTheme;
 
@@ -53,52 +59,45 @@ fn main() {
         let (command_send, command_recv) = channel();
         thread::spawn(move || command_promt(command_send));
 
-        let mut lobby = BTreeMap::new();
+        let mut new_players = HashSet::new();
+        let mut game = Game::new();
 
-        loop {
+        while game.is_running() {
             // First, check to see if there are any new clients sitting
             // in the receiver. For each client found, send a username
             // request, create a Player with the client info, and add
-            // that player to the lobby.
+            // that player to the list of new players.
             let connections = client_recv.try_iter();
             for (client, event_recv) in connections {
                 println!("Creating Player {:?}", client.token());
-                client.send(Message::binary(Event::GetName)).unwrap();
-                lobby.insert(usize::from(client.token()), Player::new(client, event_recv));
+                client.send(Message::binary(&Event::GetName)).unwrap();
+                new_players.insert(Player::new(client, event_recv));
             }
 
-            handle_player_event(&mut lobby);
+            new_players = game.add_players(new_players);
 
-            // This will return true if the quit command was entered.
-            // At which point the server should shutdown.
-            if handle_command_event(&command_recv, &mut lobby) {
-                for player in lobby.values() {
-                    player.client
-                        .close_with_reason(CloseCode::Normal, "Server shutdown")
-                        .unwrap();
-                }
-                // The clients need some time to recieve the close
-                // before the server shuts sown.
-                thread::sleep(Duration::from_millis(100));
-                return;
-            }
+            game.run();
+
+            handle_command_event(&command_recv, &mut game);
 
             thread::sleep(Duration::from_millis(10));
         }
     } else {
         // CLIENT
         loop {
-            let (sender, receiver) = channel();
+            let (server_send, server_recv) = channel();
             let url = Input::<String>::new()
                 .with_prompt("Server address")
                 .default("ws:/127.0.0.1:3012".to_string())
                 .interact()
                 .unwrap();
 
-            let handle = thread::spawn(move || client(sender, url));
+            let handle = thread::spawn(move || client(server_send, url));
 
-            if let Ok(server) = receiver.recv_timeout(Duration::from_secs(10)) {
-                while handle_server_event(&server).is_ok() {
+            if let Ok(server) = server_recv.recv_timeout(Duration::from_secs(10)) {
+                let mut client = Client::new(server.0, server.1);
+
+                while client.handle_event() {
                     thread::sleep(Duration::from_millis(10));
                 }
             }

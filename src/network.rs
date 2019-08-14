@@ -48,7 +48,6 @@ impl Handler for Connection {
     fn on_message(&mut self, msg: Message) -> Result<()> {
         if msg.is_binary() {
             let event: Event = bincode::deserialize(&msg.into_data()).unwrap();
-            println!("Received message {:?}", event);
             self.event_que
                 .as_ref()
                 .unwrap()
