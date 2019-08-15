@@ -28,7 +28,7 @@ impl Game {
         }
     }
 
-    // Check to see if we received a username for any of the players. 
+    // Check to see if we received a username for any of the players.
     // If we did, set their username, then add them to the game. For
     // all players that we haven't received a username, give them
     // back to main.
@@ -42,7 +42,12 @@ impl Game {
         for mut player in players.drain() {
             if let Ok(Event::SetName(name)) = player.event.try_recv() {
                 player.name = name;
-                self.lobby.insert(usize::from(player.client.token()), player);
+                self.group_send(
+                    None,
+                    Event::Message(format!("{} joined the game", &player.name)),
+                );
+                self.lobby
+                    .insert(usize::from(player.client.token()), player);
             } else {
                 unnamed.insert(player);
             }
@@ -51,6 +56,9 @@ impl Game {
     }
 
     pub fn run(&mut self) -> bool {
+        // Removes all players who have disconnected
+        self.disconnect();
+
         self.handle_event();
 
         self.state = match self.state {
@@ -63,32 +71,57 @@ impl Game {
     // This will handle all of the events of the players and
     // should be used in a loop to check for player responses.
     fn handle_event(&mut self) {
-        for player in self.lobby.values() {
+        for (token, player) in self.lobby.iter_mut() {
             if let Ok(event) = player.event.try_recv() {
                 match event {
                     Event::Message(m) => println!("{}", m),
+                    Event::Disconnect => player.disconnect(),
                     _ => (),
                 };
             }
         }
     }
 
+    // Check all players to see if they have disconnected, then
+    // remove all players who have.
+    fn disconnect(&mut self) {
+        let mut to_remove = Vec::new();
+        for (token, player) in self.lobby.iter() {
+            if !player.connected {
+                to_remove.push(*token);
+            }
+        }
+        for token in to_remove {
+            self.group_send(
+                None,
+                Event::Message(format!(
+                    "{} left the game",
+                    self.lobby.get(&token).unwrap().name
+                )),
+            );
+            self.lobby.remove(&token);
+        }
+    }
+
+    // Print a total player count, and a formatted list of
+    // each player and their token.
     pub fn list(&self) -> String {
         let mut list = format!("Player count: {}\n", self.lobby.len());
         for (token, player) in self.lobby.iter() {
-           list += format!("{}: {}\n", token, player.name).as_str();
+            list += format!("{}: {}\n", token, player.name).as_str();
         }
         list
     }
 
     pub fn is_running(&mut self) -> bool {
-        self.state != State::Shutdown 
+        self.state != State::Shutdown
     }
 
     // Disconnect all of the players and set state to Shutdown
     pub fn quit(&mut self) {
         for player in self.lobby.values() {
-            player.client
+            player
+                .client
                 .close_with_reason(CloseCode::Normal, "Server shutdown")
                 .unwrap();
         }
@@ -103,11 +136,8 @@ impl Game {
                 player.send(&event);
             }
         } else {
-            for player in self.lobby
-                .values()
-                .filter(|player| player.is_role(&group))
-            {
-                player.send(&event); 
+            for player in self.lobby.values().filter(|player| player.is_role(&group)) {
+                player.send(&event);
             }
         }
     }
@@ -117,4 +147,3 @@ impl Game {
         State::Waiting(false)
     }
 }
-

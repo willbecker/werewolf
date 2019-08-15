@@ -1,7 +1,7 @@
-use std::sync::mpsc::Receiver;
 use std::hash::{Hash, Hasher};
-use ws::Sender as NetSender;
+use std::sync::mpsc::Receiver;
 use ws::Message;
+use ws::Sender as NetSender;
 
 use crate::event::Event;
 
@@ -17,6 +17,7 @@ pub struct Player {
     pub event: Receiver<Event>,
     pub name: String,
     role: Option<Role>,
+    pub connected: bool,
 }
 
 impl Player {
@@ -26,15 +27,20 @@ impl Player {
             event: event_recv,
             name: "".to_string(),
             role: None,
+            connected: true,
         }
     }
-    
+
     pub fn send(&self, event: &Event) {
         self.client.send(Message::binary(event)).unwrap();
     }
 
     pub fn is_role(&self, role: &Option<Role>) -> bool {
         self.role == *role
+    }
+
+    pub fn disconnect(&mut self) {
+        self.connected = false;
     }
 }
 

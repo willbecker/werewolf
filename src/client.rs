@@ -1,7 +1,7 @@
 use dialoguer::Input;
 use std::sync::mpsc::Receiver;
-use ws::Sender as NetSender;
 use ws::Message;
+use ws::Sender as NetSender;
 
 use crate::event::Event;
 
@@ -12,10 +12,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(server: NetSender, event: Receiver<Event>) -> Client {
-        Client {
-            server,
-            event,
-        }
+        Client { server, event }
     }
 
     pub fn send(&self, event: Event) {
@@ -31,7 +28,7 @@ impl Client {
                 Event::Message(m) => println!("{}", m),
                 _ => (),
             };
-            return true
+            return true;
         }
         false
     }

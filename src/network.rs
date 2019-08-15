@@ -63,5 +63,10 @@ impl Handler for Connection {
             code,
             reason
         );
+        self.event_que
+            .as_ref()
+            .unwrap()
+            .send(Event::Disconnect)
+            .expect("Could not send disconnect event to main thread");
     }
 }

@@ -1,12 +1,12 @@
 use clap::{App, Arg};
 use dialoguer::theme::CustomPromptCharacterTheme;
 use dialoguer::Input;
+use std::collections::HashSet;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use std::collections::HashSet;
-use ws::{Message};
+use ws::Message;
 
 mod network;
 use network::{client, server};
@@ -84,16 +84,28 @@ fn main() {
         }
     } else {
         // CLIENT
+
+        // The client's outer loop will keep prompting for a server
+        // address until it makes a connection.
         loop {
-            let (server_send, server_recv) = channel();
+            // The prompt defaults to localhost to make my life
+            // easier when testing. I plan to make this more general
+            // in the future.
             let url = Input::<String>::new()
                 .with_prompt("Server address")
                 .default("ws:/127.0.0.1:3012".to_string())
                 .interact()
                 .unwrap();
 
+            // Use a channel to retreive server info from the connection
+            // handler thread.
+            let (server_send, server_recv) = channel();
             let handle = thread::spawn(move || client(server_send, url));
 
+            // If we get the server info back in a reasonable amount of time,
+            // we create a Client passing the server info to it. The inner loop
+            // runs as long as the event handler is successful. Sleep is uesed
+            // to control the polling rate of the event handler.
             if let Ok(server) = server_recv.recv_timeout(Duration::from_secs(10)) {
                 let mut client = Client::new(server.0, server.1);
 
@@ -101,6 +113,10 @@ fn main() {
                     thread::sleep(Duration::from_millis(10));
                 }
             }
+
+            // If the connection fails or is dropped at any point, then we
+            // wait for the connection handler thread to finish up and move
+            // to the next iteration of the outer loop.
             handle.join().unwrap();
         }
     }

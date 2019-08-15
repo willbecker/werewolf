@@ -11,6 +11,7 @@ pub enum Event {
     Message(String),
     Waiting(usize),
     ReadyCheck,
+    Disconnect,
     List,
     Quit,
 }
@@ -30,4 +31,3 @@ pub fn handle_command_event(command: &Receiver<Event>, game: &mut Game) {
         };
     }
 }
-
