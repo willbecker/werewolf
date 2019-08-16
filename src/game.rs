@@ -16,7 +16,7 @@ enum State {
 pub struct Game {
     lobby: BTreeMap<usize, Player>,
     state: State,
-    ww_target: Option<usize>,
+    _ww_target: Option<usize>,
 }
 
 impl Game {
@@ -24,7 +24,7 @@ impl Game {
         Game {
             lobby: BTreeMap::new(),
             state: State::Waiting(true),
-            ww_target: None,
+            _ww_target: None,
         }
     }
 
@@ -71,7 +71,7 @@ impl Game {
     // This will handle all of the events of the players and
     // should be used in a loop to check for player responses.
     fn handle_event(&mut self) {
-        for (token, player) in self.lobby.iter_mut() {
+        for (_token, player) in self.lobby.iter_mut() {
             if let Ok(event) = player.event.try_recv() {
                 match event {
                     Event::Message(m) => println!("{}", m),
@@ -142,7 +142,7 @@ impl Game {
         }
     }
 
-    fn waiting(&mut self, first: bool) -> State {
+    fn waiting(&mut self, _first: bool) -> State {
         self.group_send(None, Event::Waiting(self.lobby.len()));
         State::Waiting(false)
     }

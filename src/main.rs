@@ -23,6 +23,8 @@ use player::Player;
 mod game;
 use game::Game;
 
+mod terminal;
+
 type Prompt = CustomPromptCharacterTheme;
 
 // The main function parses the command line argumens using Clap
@@ -74,6 +76,9 @@ fn main() {
                 new_players.insert(Player::new(client, event_recv));
             }
 
+            // All players that have received a username are
+            // added to the game lobby all unnamed players
+            // are send back.  new_players = game.add_players(new_players);
             new_players = game.add_players(new_players);
 
             game.run();
@@ -122,6 +127,10 @@ fn main() {
     }
 }
 
+// A simple command prompt for interfacing with the server.
+// If the user enters a valid command that maps to an event,
+// then that event gets send back to the main thread to be
+// handled.
 fn command_promt(main_thread: Sender<Event>) {
     while {
         let mut event = None;

@@ -7,9 +7,9 @@ use crate::event::Event;
 
 #[derive(PartialEq)]
 pub enum Role {
-    Werewolf,
-    Villager,
-    Witch,
+    _Werewolf,
+    _Villager,
+    _Witch,
 }
 
 pub struct Player {

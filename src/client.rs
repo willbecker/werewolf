@@ -1,9 +1,9 @@
-use dialoguer::Input;
 use std::sync::mpsc::Receiver;
 use ws::Message;
 use ws::Sender as NetSender;
 
 use crate::event::Event;
+use crate::terminal;
 
 pub struct Client {
     server: NetSender,
@@ -24,8 +24,12 @@ impl Client {
     pub fn handle_event(&mut self) -> bool {
         if let Ok(event) = self.event.recv() {
             match event {
-                Event::GetName => self.prompt_name(),
-                Event::Message(m) => println!("{}", m),
+                Event::GetName => {
+                    let name = terminal::prompt("Username");
+                    self.send(Event::SetName(name));
+                }
+                Event::Message(m) => terminal::print_pos(1, 1, m),
+                Event::Waiting(c) => self.waiting(c),
                 _ => (),
             };
             return true;
@@ -33,12 +37,8 @@ impl Client {
         false
     }
 
-    fn prompt_name(&self) {
-        let name = Input::<String>::new()
-            .with_prompt("Username")
-            .interact()
-            .unwrap();
-
-        self.send(Event::SetName(name));
+    fn waiting(&mut self, player_count: usize) {
+        terminal::print_pos(1, 2, "5 players are required to start the game".to_string());
+        terminal::print_pos(1, 3, format!("Players [{}/5]", player_count));
     }
 }
