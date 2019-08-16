@@ -5,7 +5,7 @@ This is an online multiplayer, text based version of the game [Werewolf](https:/
 
 Progress
 --------
-Some far, I have been able to implement most of the networking code. I'm using WebSockets as my communiction protocal which I implement using [WS-RS](https://github.com/housleyjk/ws-rs).
+So far, I have been able to implement most of the networking code. I'm using WebSockets as my communication protocal which I implement using [WS-RS](https://github.com/housleyjk/ws-rs).
 
 Running the Game
 ----------------
@@ -21,7 +21,7 @@ cargo run -- -s
 ```
 At this point, the server is hard coded to run on localhost at port 8888. The client will prompt for an address when it is started. You can hit enter to accept default address which will just connect you to a server running on the same computer.
 
-You can enter commands into to server terminal to interact with the game.
+You can enter commands into the server terminal to interact with the game.
 
 Commadns so far
 ```
@@ -31,7 +31,7 @@ quit - shuts the server down
 
 Testing
 -------
-I don't really know where to start with writing automatic test for the networking. Maybe I can create a fake server in the client test, and fake clients in the server tests. With how much my server and client have to communicate for basic tasks, it seems like unit testing would be quite difficult.
+I don't really know where to start with writing automatic tests for the networking. Maybe I can create a fake server in the client tests, and fake clients in the server tests. With how much my server and client have to communicate for basic tasks, it seems like unit testing would be quite difficult.
 
 The testing I have done has been pretty manual. I open a server terminal and a bunch of client terminals, and just play around to see if I can break anything. The network testing situation isn't great. I would like to improve this going forward, but I think it will take some time implement. On the other hand, I think writting tests for the game part will be easier, which I should be able to manage going forward.
 
