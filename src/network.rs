@@ -9,8 +9,8 @@ use ws::*;
 use crate::event::Event;
 
 pub fn server(sender: Sender<(NetSender, Receiver<Event>)>) {
-    println!("Server running at '127.0.0.1:3012'");
-    listen("127.0.0.1:3012", |out| Connection {
+    println!("Server running at '127.0.0.1:8888'");
+    listen("127.0.0.1:8888", |out| Connection {
         out,
         thread: sender.clone(),
         event_que: None,

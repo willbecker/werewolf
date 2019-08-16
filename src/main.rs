@@ -98,7 +98,7 @@ fn main() {
             // in the future.
             let url = Input::<String>::new()
                 .with_prompt("Server address")
-                .default("ws:/127.0.0.1:3012".to_string())
+                .default("ws:/127.0.0.1:8888".to_string())
                 .interact()
                 .unwrap();
 
