@@ -18,6 +18,7 @@ pub struct Player {
     pub name: String,
     role: Option<Role>,
     pub connected: bool,
+    host: bool,
 }
 
 impl Player {
@@ -28,6 +29,7 @@ impl Player {
             name: "".to_string(),
             role: None,
             connected: true,
+            host: false,
         }
     }
 
@@ -37,6 +39,14 @@ impl Player {
 
     pub fn is_role(&self, role: &Option<Role>) -> bool {
         self.role == *role
+    }
+
+    pub fn is_host(&self) -> bool {
+        self.host
+    }
+
+    pub fn assign_host(&mut self) {
+        self.host = true;
     }
 
     pub fn disconnect(&mut self) {

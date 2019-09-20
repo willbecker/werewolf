@@ -1,21 +1,27 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use ws::CloseCode;
 
 use crate::event::Event;
 use crate::player::{Player, Role};
 
-// each variant has a bool indicate if it has already been
-// run. True means that we are on the first cycle of the
-// state, while false means that we are on some later cycle.
 #[derive(PartialEq)]
 enum State {
-    Waiting(bool),
+    Waiting, 
+    RoleAssign,
     Shutdown,
+}
+
+enum Group {
+    Role(Option<Role>),
+    All,
+    Host,
 }
 
 pub struct Game {
     lobby: BTreeMap<usize, Player>,
     state: State,
+    missing_host: bool,
+    waiting_for_client: bool,
     _ww_target: Option<usize>,
 }
 
@@ -23,7 +29,9 @@ impl Game {
     pub fn new() -> Game {
         Game {
             lobby: BTreeMap::new(),
-            state: State::Waiting(true),
+            state: State::Waiting,
+            missing_host: true,
+            waiting_for_client: false,
             _ww_target: None,
         }
     }
@@ -43,7 +51,7 @@ impl Game {
             if let Ok(Event::SetName(name)) = player.event.try_recv() {
                 player.name = name;
                 self.group_send(
-                    None,
+                    Group::All,
                     Event::Message(format!("{} joined the game", &player.name)),
                 );
                 self.lobby
@@ -55,31 +63,77 @@ impl Game {
         unnamed
     }
 
-    pub fn run(&mut self) -> bool {
+    pub fn is_running(&mut self) -> bool {
         // Removes all players who have disconnected
         self.disconnect();
 
+        if self.missing_host && self.lobby.len() > 0 {
+            let new_host = self.lobby.values_mut().next().unwrap();
+            new_host.assign_host();
+            self.missing_host = false;
+            println!("{} is now the host", new_host.name);
+        }
+
         self.handle_event();
 
-        self.state = match self.state {
-            State::Waiting(first) => self.waiting(first),
-            State::Shutdown => State::Shutdown,
+        match self.state {
+            State::Waiting => self.waiting(),
+            State::RoleAssign => self.role_assign(),
+            State::Shutdown => return false,
         };
-        false
+        true
     }
 
     // This will handle all of the events of the players and
     // should be used in a loop to check for player responses.
     fn handle_event(&mut self) {
-        for (_token, player) in self.lobby.iter_mut() {
+        let mut event_que: VecDeque<(usize, Event)> = VecDeque::new();
+
+        for (token, player) in self.lobby.iter_mut() {
             if let Ok(event) = player.event.try_recv() {
-                match event {
-                    Event::Message(m) => println!("{}", m),
-                    Event::Disconnect => player.disconnect(),
-                    _ => (),
-                };
+                event_que.push_back((*token, event)); 
             }
         }
+
+        for (token, event) in event_que.iter() {
+            match event {
+                Event::Message(m) => println!("{}", m),
+                Event::Ready => self.start_game(),
+                Event::Disconnect => self.get_player(token).disconnect(),
+                _ => (),
+            };
+        }
+    }
+
+    fn waiting(&mut self) {
+        self.group_send(Group::All, Event::Waiting(self.lobby.len()));
+        if self.lobby.len() >= 5 && !self.waiting_for_client {
+            self.group_send(Group::Host, Event::Readycheck);
+            self.waiting_for_client = true;
+        }
+    }
+
+    fn start_game(&mut self) {
+        let players = self.lobby.len();
+
+        if players >= 5 {
+            self.state = State::RoleAssign;
+        } else {
+            self.group_send(Group::Host,
+                Event::Message(format!(
+                    "Cannot start the game with only {} players",
+                    players
+                ))
+            );
+        }
+    }
+
+    fn role_assign(&mut self, ) {
+        unimplemented!();
+    }
+
+    fn get_player(&mut self, token: &usize) -> &mut Player {
+        self.lobby.get_mut(token).unwrap() 
     }
 
     // Check all players to see if they have disconnected, then
@@ -93,14 +147,18 @@ impl Game {
         }
         for token in to_remove {
             self.group_send(
-                None,
+                Group::All,
                 Event::Message(format!(
                     "{} left the game",
                     self.lobby.get(&token).unwrap().name
                 )),
             );
-            self.lobby.remove(&token);
+
+            if self.lobby.remove(&token).unwrap().is_host() {
+                self.missing_host = true;
+            }
         }
+        
     }
 
     // Print a total player count, and a formatted list of
@@ -111,10 +169,6 @@ impl Game {
             list += format!("{}: {}\n", token, player.name).as_str();
         }
         list
-    }
-
-    pub fn is_running(&mut self) -> bool {
-        self.state != State::Shutdown
     }
 
     // Disconnect all of the players and set state to Shutdown
@@ -128,22 +182,29 @@ impl Game {
         self.state = State::Shutdown;
     }
 
+
     // Send an event to a specific group of players
-    // None means all player will receive the event.
-    fn group_send(&self, group: Option<Role>, event: Event) {
-        if group.is_none() {
-            for player in self.lobby.values() {
-                player.send(&event);
+    // Role(r) for all players with r role
+    // All for all players
+    // Host for the host player.
+    fn group_send(&self, group: Group, event: Event) {
+        match group {
+            Group::Role(r) => { 
+                for player in self.lobby.values().filter(|player| player.is_role(&r)) {
+                    player.send(&event);
+                }
             }
-        } else {
-            for player in self.lobby.values().filter(|player| player.is_role(&group)) {
-                player.send(&event);
+            Group::All => {
+                for player in self.lobby.values() {
+                    player.send(&event);
+                }
+            }
+            Group::Host => {
+                for player in self.lobby.values().filter(|player| player.is_host()) {
+                    player.send(&event);
+                }
             }
         }
     }
 
-    fn waiting(&mut self, _first: bool) -> State {
-        self.group_send(None, Event::Waiting(self.lobby.len()));
-        State::Waiting(false)
-    }
 }

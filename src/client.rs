@@ -29,6 +29,7 @@ impl Client {
                     self.send(Event::SetName(name));
                 }
                 Event::Message(m) => terminal::print_pos(1, 1, m),
+                Event::Readycheck => self.ready_check(),
                 Event::Waiting(c) => self.waiting(c),
                 _ => (),
             };
@@ -40,5 +41,10 @@ impl Client {
     fn waiting(&mut self, player_count: usize) {
         terminal::print_pos(1, 2, "5 players are required to start the game".to_string());
         terminal::print_pos(1, 3, format!("Players [{}/5]", player_count));
+    }
+
+    fn ready_check(&self) {
+        terminal::confirm("Press Enter to start the game");
+        self.send(Event::Ready);
     }
 }

@@ -24,6 +24,7 @@ mod game;
 use game::Game;
 
 mod terminal;
+use terminal::clear_all;
 
 type Prompt = CustomPromptCharacterTheme;
 
@@ -81,7 +82,7 @@ fn main() {
             // are send back.  new_players = game.add_players(new_players);
             new_players = game.add_players(new_players);
 
-            game.run();
+            //game.run();
 
             handle_command_event(&command_recv, &mut game);
 
@@ -96,6 +97,8 @@ fn main() {
             // The prompt defaults to localhost to make my life
             // easier when testing. I plan to make this more general
             // in the future.
+
+            clear_all();
             let url = Input::<String>::new()
                 .with_prompt("Server address")
                 .default("ws:/127.0.0.1:8888".to_string())
