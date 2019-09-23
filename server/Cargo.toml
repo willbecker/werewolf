@@ -1,5 +1,5 @@
 [package]
-name = "werewolf"
+name = "werewolf-server"
 version = "0.1.0"
 authors = ["Will Becker <wibecker@pdx.edu>"]
 edition = "2018"
